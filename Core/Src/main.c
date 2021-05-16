@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "lcd-i2c.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,11 +44,16 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+I2C_HandleTypeDef hi2c1;
+
 /* USER CODE BEGIN PV */
 volatile uint16_t adc[64] = {0};
 volatile uint8_t flag = 0;
 float adc_measure = 0;
 float end_temp = 0;
+float voltage = 0;
+
+char number[20];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -55,6 +61,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 void ADC_Display_Result(void);
 /* USER CODE END PFP */
@@ -94,7 +101,16 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+  lcd_init();
+  HAL_Delay(100);
+  lcd_clear();
+  HAL_Delay(100);
+  lcd_send_string("    Welcome!");
+  HAL_Delay(2800);
+  lcd_clear();
+
   HAL_ADCEx_Calibration_Start(&hadc1);
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc, 64);
   /* USER CODE END 2 */
@@ -207,6 +223,40 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -232,6 +282,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
 }
 
@@ -257,8 +308,21 @@ void ADC_Display_Result(void)
 	        }
 	        adc_measure = adc_measure / 64.0;
 
-	        end_temp = (adc_measure * (3.3/4096) * 1000 - 500) / 10.0;
+	        voltage = adc_measure * (3.3/4096);
 
+	        end_temp = (voltage * 1000 - 500) / 10.0;
+
+	        HAL_Delay(1);
+
+	        lcd_put_cur(0,0);
+	        sprintf(number, "Volt:  %.4f V", voltage);
+	        lcd_send_string(number);
+
+	        HAL_Delay(1);
+	        lcd_put_cur(1,0);
+
+	        sprintf(number, "Temp:  %.2f *C",  end_temp);
+	        lcd_send_string(number);
 	  }
 }
 /* USER CODE END 4 */
